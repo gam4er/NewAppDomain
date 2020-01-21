@@ -1,8 +1,10 @@
 ﻿using System;
+using System.Collections.Generic;
 using System.IO;
 using System.Reflection;
 using System.Reflection.Emit;
 using System.Security.Policy;
+using System.Linq;
 
 class Test
 {
@@ -13,11 +15,14 @@ class Test
         Evidence adevidence = AppDomain.CurrentDomain.Evidence;
         AppDomain currentDomain = AppDomain.CreateDomain("MyDomain", adevidence, domaininfo);
 
+        //E:\Users\RODCHENKO\Documents\GitHub\Seatbelt\Seatbelt\bin\Debug\Seatbelt.dll
         //AppDomain currentDomain = AppDomain.CurrentDomain;
 
-        InstantiateMyType(currentDomain);   // Failed!
+        //InstantiateMyType(currentDomain);   // Failed!
 
         currentDomain.AssemblyResolve += new ResolveEventHandler(MyResolver);
+        //currentDomain.ReflectionOnlyAssemblyResolve += new ResolveEventHandler(MyResolver);
+        //currentDomain.TypeResolve += new ResolveEventHandler(MyResolver);
 
         InstantiateMyType(currentDomain);   // OK!
     }
@@ -27,7 +32,26 @@ class Test
         try
         {
             // You must supply a valid fully qualified assembly name here.
-            domain.CreateInstance("Assembly text name, Version, Culture, PublicKeyToken", "MyType");
+            domain.CreateInstance("Seatbelt, Version=1.0.0.0, Culture=neutral, PublicKeyToken=null", "Seatbelt.Program");
+            Assembly[] AllAssemblies = domain.GetAssemblies();
+            List<Assembly> assemblies = AllAssemblies.OfType<Assembly>().ToList();
+            Assembly a = assemblies.Where(n => n.FullName.Contains("Seatbelt")).First();  //.GetEnumerator().(""); _assembly.GetType(typeName);
+                                                                                                                                  // TODO: this won't work if there are overloads available
+            Type type = a.GetType("Seatbelt.Program");
+            MethodInfo method = type.GetMethod(
+                "ListUserFolders",
+                BindingFlags.Static | BindingFlags.Public);
+            method.Invoke(null, null);
+
+            /*
+             * Type type = _assembly.GetType(typeName);
+                // TODO: this won't work if there are overloads available
+                MethodInfo method = type.GetMethod(
+                    methodName,
+                    BindingFlags.Static | BindingFlags.Public);
+                return method.Invoke(null, parameters);
+             */
+
         }
         catch (Exception e)
         {
@@ -52,12 +76,16 @@ class Test
 
         // Once the files are generated, this call is
         // actually no longer necessary.
-        EmitAssembly(domain);
+        //EmitAssembly(domain);
 
-        byte[] rawAssembly = loadFile("temp.dll");
-        byte[] rawSymbolStore = loadFile("temp.pdb");
-        Assembly assembly = domain.Load(rawAssembly, rawSymbolStore);
-
+        //byte[] rawAssembly = loadFile(@"E:\Users\RODCHENKO\Documents\GitHub\Seatbelt\Seatbelt\bin\Debug\Seatbelt.dll");
+        //byte[] rawSymbolStore = loadFile("temp.pdb");
+        //Assembly assembly = domain.Load(rawAssembly);
+        Assembly assembly = domain.Load(@"E:\Users\RODCHENKO\Documents\GitHub\Seatbelt\Seatbelt\bin\Debug\Seatbelt.dll");
+        AssemblyName [] names = assembly.GetReferencedAssemblies();
+        foreach (AssemblyName name in names) {
+            domain.Load(name);
+        }
         return assembly;
     }
 
